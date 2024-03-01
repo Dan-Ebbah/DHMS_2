@@ -27,7 +27,7 @@ public class TestServer {
             NamingContextExt ncRef = NamingContextExtHelper.narrow(objRef);
 
             NameComponent[] path = ncRef.to_name("TestHello");
-            ncRef.bind(path, healthCareSystem);
+            ncRef.rebind(path, healthCareSystem);
 
             System.out.println("Test Server is running ...");
 
