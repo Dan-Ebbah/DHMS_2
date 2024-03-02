@@ -1,12 +1,18 @@
 package server;
 
+import ManagementServer.AppointmentType;
 import ManagementServer.HealthCareSystem;
 import ManagementServer.HealthCareSystemHelper;
+import database.HashMapImpl;
+import model.Appointment;
 import org.omg.CORBA.Object;
 import org.omg.CosNaming.*;
 import org.omg.CORBA.*;
 import org.omg.PortableServer.POA;
 import org.omg.PortableServer.POAHelper;
+
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TestServer {
     public static void main(String[] args) {
@@ -17,7 +23,10 @@ public class TestServer {
             POA rootpoa = POAHelper.narrow(orb.resolve_initial_references("RootPOA"));
             rootpoa.the_POAManager().activate();
 
-            ServerImpl server = new ServerImpl();
+            ConcurrentHashMap<AppointmentType, HashMap<String, Appointment>> appointments = new ConcurrentHashMap<>();
+            HashMapImpl hashMap = new HashMapImpl(appointments);
+
+            ServerImpl server = new ServerImpl(hashMap);
 
             Object ref = rootpoa.servant_to_reference(server);
 
