@@ -8,7 +8,7 @@ module ManagementServer {
         string addAppointment(in string appointmentID, in AppointmentType appointmentType, in long capacity);
         string removeAppointment(in string appointmentID, in AppointmentType appointmentType);
         string bookAppointment(in string patientID, in AppointmentType appointmentType, in string appointmentID);
-        string cancelAppointment(in string patientID, in string appointmentType, in string appointmentID);
+        string cancelAppointment(in string patientID, in string appointmentID);
         string getAppointmentSchedule(in string patientID);
         string listAppointmentAvailability(in string appointmentType);
         boolean swapAppointment(in string patientID, in string oldAppointmentType, in string oldAppointmentID, in string newAppointmentType, in string newAppointmentID);
