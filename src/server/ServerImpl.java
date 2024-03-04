@@ -4,14 +4,30 @@ import ManagementServer.AppointmentType;
 import ManagementServer.HealthCareSystemPOA;
 import database.HashMapImpl;
 import model.Appointment;
+import model.UDPServerInfo;
+import util.AppointmentTypeConverter;
 
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
+import java.rmi.RemoteException;
 import java.util.List;
 
 public class ServerImpl extends HealthCareSystemPOA {
     private HashMapImpl _database;
 
-    public ServerImpl(HashMapImpl database) {
+    public ServerImpl(HashMapImpl database, int portNum) throws SocketException {
         _database = database;
+        createAndStartThread(portNum, getServerName());
+    }
+
+    public String getServerName() {
+        return null;
+    }
+
+    private void createAndStartThread(int portNum, String serverName) throws SocketException {
+        new Thread(new UDPServerThread(portNum, _database, serverName)).start();
     }
 
     @Override
@@ -62,7 +78,44 @@ public class ServerImpl extends HealthCareSystemPOA {
 
     @Override
     public String listAppointmentAvailability(String appointmentType) {
-        return "List ";
+        AppointmentType convertedAppointmentType = AppointmentTypeConverter.convertToAppointmentType(appointmentType);
+        StringBuilder stringBuilder = new StringBuilder(appointmentType).append(" - ");
+        stringBuilder.append(_database.getAvailability(convertedAppointmentType));
+        stringBuilder.append(getOthersAvailability(appointmentType));
+        String msg = stringBuilder.toString();
+//        logger.info(msg);
+        return msg;
+    }
+
+    public String getOthersAvailability(String appointmentType) {
+        StringBuilder stringBuilder = new StringBuilder();
+        for(UDPServerInfo serverInfo : getOtherServersInfo()) {
+            try (DatagramSocket socket = new DatagramSocket()) {
+                InetAddress byAddress = InetAddress.getByName("localhost");
+                byte[] sendData = appointmentType.getBytes();
+                DatagramPacket datagramPacket = new DatagramPacket(sendData, sendData.length, byAddress, serverInfo.getPort());
+
+                socket.send(datagramPacket);
+
+                byte[] receiveData = new byte[1024];
+                DatagramPacket datagramPacket1 = new DatagramPacket(receiveData, receiveData.length);
+                socket.receive(datagramPacket1);
+
+                String s = new String(datagramPacket1.getData(), 0, datagramPacket1.getLength());
+                stringBuilder.append(s);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        return stringBuilder.toString();
+    }
+
+    protected UDPServerInfo[] getOtherServersInfo() {
+        UDPServerInfo sherbrookeServerAddress = new UDPServerInfo("SherbrookeServerAddress", 5053);
+        UDPServerInfo quebecServerAddress = new UDPServerInfo("QuebecServerAddress", 5051);
+
+        return new UDPServerInfo[]{sherbrookeServerAddress, quebecServerAddress};
     }
 
     @Override
