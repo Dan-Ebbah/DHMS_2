@@ -1,11 +1,10 @@
 package database;
 
 import model.Appointment;
-import model.AppointmentType;
-
+import ManagementServer.AppointmentType;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class SherbrookeHashMap extends HashMap {
+public class SherbrookeHashMap extends HashMapImpl {
 
     public SherbrookeHashMap() {
         initializeDB();

@@ -1,11 +1,11 @@
 package database;
 
+import ManagementServer.AppointmentType;
 import model.Appointment;
-import model.AppointmentType;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-public class MontrealHashMap extends HashMap {
+public class MontrealHashMap extends HashMapImpl {
 
     public MontrealHashMap() {
         initializeDB();

@@ -1,11 +1,11 @@
 package database;
 
+import ManagementServer.AppointmentType;
 import model.Appointment;
-import model.AppointmentType;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-public class QuebecHashMap extends HashMap {
+public class QuebecHashMap extends HashMapImpl {
     public QuebecHashMap(ConcurrentHashMap<AppointmentType, java.util.HashMap<String, Appointment>> appointments) {
         super(appointments);
     }
