@@ -115,7 +115,7 @@ public class HashMapImpl {
     public List<Appointment> getByPatientId(String patientID) {
         return appointments.values().stream()
                 .flatMap(x -> x.values().stream())
-                .filter(x -> x.getPatientID().equalsIgnoreCase(patientID))
+                .filter(x -> x.getPatientID() != null && x.getPatientID().equalsIgnoreCase(patientID))
                 .collect(Collectors.toList());
     }
 
