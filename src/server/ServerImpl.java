@@ -2,8 +2,10 @@ package server;
 
 import ManagementServer.AppointmentType;
 import ManagementServer.HealthCareSystemPOA;
+import com.sun.xml.internal.ws.util.StringUtils;
 import database.HashMapImpl;
 import model.Appointment;
+import model.HospitalType;
 import model.UDPServerInfo;
 import util.AppointmentTypeConverter;
 
@@ -12,7 +14,9 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.SocketException;
 import java.rmi.RemoteException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ServerImpl extends HealthCareSystemPOA {
     private HashMapImpl _database;
@@ -62,7 +66,7 @@ public class ServerImpl extends HealthCareSystemPOA {
     }
 
     @Override
-    public String cancelAppointment(String patientID, String appointmentType, String appointmentID) {
+    public String cancelAppointment(String patientID, String appointmentID) {
         if (isAppointmentPresent(appointmentID)) {
             return _database.cancel(patientID, appointmentID);
         }
@@ -81,10 +85,32 @@ public class ServerImpl extends HealthCareSystemPOA {
         AppointmentType convertedAppointmentType = AppointmentTypeConverter.convertToAppointmentType(appointmentType);
         StringBuilder stringBuilder = new StringBuilder(appointmentType).append(" - ");
         stringBuilder.append(_database.getAvailability(convertedAppointmentType));
+        stringBuilder.append(" ");
         stringBuilder.append(getOthersAvailability(appointmentType));
+        stringBuilder.append(" ");
         String msg = stringBuilder.toString();
 //        logger.info(msg);
         return msg;
+    }
+
+    public Boolean isBookableAndBooked(UDPServerInfo serverInfo, String newAppointmentID, String patientId) {
+        try (DatagramSocket socket = new DatagramSocket()) {
+            InetAddress byAddress = InetAddress.getByName("localhost");
+            String toSend = String.format("%d,%s/%s", 2, newAppointmentID, patientId);
+            byte[] sendData = toSend.getBytes();
+            DatagramPacket datagramPacket = new DatagramPacket(sendData, sendData.length, byAddress, serverInfo.getPort());
+
+            socket.send(datagramPacket);
+
+            byte[] receiveData = new byte[1024];
+            DatagramPacket datagramPacket1 = new DatagramPacket(receiveData, receiveData.length);
+            socket.receive(datagramPacket1);
+
+            String s = new String(datagramPacket1.getData(), 0, datagramPacket1.getLength());
+            return Boolean.valueOf(s);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public String getOthersAvailability(String appointmentType) {
@@ -92,7 +118,8 @@ public class ServerImpl extends HealthCareSystemPOA {
         for(UDPServerInfo serverInfo : getOtherServersInfo()) {
             try (DatagramSocket socket = new DatagramSocket()) {
                 InetAddress byAddress = InetAddress.getByName("localhost");
-                byte[] sendData = appointmentType.getBytes();
+                String toSend = String.format("%d,%s", 1, appointmentType);
+                byte[] sendData = toSend.getBytes();
                 DatagramPacket datagramPacket = new DatagramPacket(sendData, sendData.length, byAddress, serverInfo.getPort());
 
                 socket.send(datagramPacket);
@@ -102,6 +129,7 @@ public class ServerImpl extends HealthCareSystemPOA {
                 socket.receive(datagramPacket1);
 
                 String s = new String(datagramPacket1.getData(), 0, datagramPacket1.getLength());
+                stringBuilder.append(" ");
                 stringBuilder.append(s);
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -120,7 +148,22 @@ public class ServerImpl extends HealthCareSystemPOA {
 
     @Override
     public boolean swapAppointment(String patientID, String oldAppointmentType, String oldAppointmentID, String newAppointmentType, String newAppointmentID) {
-        return false;
+        if (!isAppointmentPresent(oldAppointmentID)) {
+            return false;
+        }
+
+        HospitalType hospitalTypeInfo = extractHospitalInfo(newAppointmentID);
+        if (!isBookableAndBooked(hospitalTypeInfo.getHospitalServerAddress(), newAppointmentID, patientID)) {
+            return  false;
+        }
+
+        _database.cancel(patientID, oldAppointmentID);
+        return true;
+    }
+
+    private HospitalType extractHospitalInfo(String newAppointmentID) {
+        String substring = newAppointmentID.substring(0, 3).toUpperCase();
+        return HospitalType.findHospital(substring);
     }
 
     private boolean isAppointmentPresent(String appointmentID) {
