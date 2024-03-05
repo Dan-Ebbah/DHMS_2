@@ -2,6 +2,7 @@ package server;
 
 import ManagementServer.AppointmentType;
 import database.HashMapImpl;
+import model.Appointment;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -37,8 +38,7 @@ public class UDPServerThread implements Runnable{
 
                 String s = new String(datagramPacket.getData(), 0, datagramPacket.getLength());
                 System.out.println("I am tasked to search for appointments for " + s.toUpperCase());
-
-                byte[] response = listCurrentAvailability(s).getBytes();
+                byte[] response = processCommand(s);
 
                 DatagramPacket sendPacket = new DatagramPacket(response, response.length, datagramPacket.getAddress(), datagramPacket.getPort());
                 socket.send(sendPacket);
@@ -50,12 +50,36 @@ public class UDPServerThread implements Runnable{
         socket.close();
     }
 
+    private byte[] processCommand(String s) {
+        String trimmed = s.trim();
+        String[] split = trimmed.split(",");
+        if(split[0].equalsIgnoreCase("1")) {
+          return listCurrentAvailability(split[1]).getBytes();
+        } else {
+            String[] bookingInfo = split[1].split("/");
+            return isPresentAndBookable(bookingInfo[0], bookingInfo[1]).getBytes();
+        }
+    }
+
     private String listCurrentAvailability(String appointmentTypeString) {
         AppointmentType appointmentType = convertToAppointmentType(appointmentTypeString);
         String s = appointmentType == null ? "" : database.getAvailability(appointmentType);
         System.out.printf("I searched through [%s] for [%s] database and got back : ->  %s", city, appointmentTypeString ,s);
         System.out.println();
         return s;
+    }
+
+    private String isPresentAndBookable(String appointmentID, String patientID) {
+        Appointment byAppointmentID = database.findByAppointmentID(appointmentID);
+        if(byAppointmentID == null) {
+            return "false";
+        }
+
+        if (byAppointmentID.getCapacity() <= 0) {
+            return "false";
+        }
+        database.book(patientID, byAppointmentID);
+        return "true";
     }
 
 }
