@@ -8,6 +8,7 @@ import model.Appointment;
 import model.HospitalType;
 import model.UDPServerInfo;
 import util.AppointmentTypeConverter;
+import util.LoggerUtil;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
@@ -17,12 +18,15 @@ import java.rmi.RemoteException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 public class ServerImpl extends HealthCareSystemPOA {
     private HashMapImpl _database;
+    private Logger logger;
 
-    public ServerImpl(HashMapImpl database, int portNum) throws SocketException {
+    public ServerImpl(HashMapImpl database, int portNum, Logger logger) throws SocketException {
         _database = database;
+        this.logger = logger;
         createAndStartThread(portNum, getServerName());
     }
 
@@ -38,45 +42,59 @@ public class ServerImpl extends HealthCareSystemPOA {
     public String addAppointment(String appointmentID, AppointmentType appointmentType, int capacity) {
         if (isAppointmentPresent(appointmentID)) {
             String msg = "Could not add appointment, because appointment seems to already exist";
-//            logger.info(String.format(msg.concat(": Appointment Type = %s, Appointment ID = %s, Appointment Capacity = %d"), appointmentID, appointmentType, capacity));
+            logger.info(String.format(msg.concat(": Appointment Type = %s, Appointment ID = %s, Appointment Capacity = %d"), appointmentID, appointmentType, capacity));
             return msg;
         }
 
         Appointment appointment = new Appointment(appointmentID, appointmentType, capacity);
         _database.insert(appointment);
         String msg = "Successfully added the new appointment";
+        logger.info(String.format(msg.concat(": Appointment Type = %s, Appointment ID = %s, Appointment Capacity = %d"), appointmentID, appointmentType, capacity));
         return msg;
     }
 
     @Override
     public String removeAppointment(String appointmentID, AppointmentType appointmentType) {
         if (isAppointmentPresent(appointmentID)) {
-            return _database.remove(new Appointment(appointmentID, appointmentType));
+            String removeMsg = _database.remove(new Appointment(appointmentID, appointmentType));
+            logger.info(String.format(removeMsg.concat(": Appointment Type = %s, Appointment ID = %s"), appointmentID, appointmentType));
+            return removeMsg;
         }
-        return "Appointment does not exist to be removed";
+        String s = "Appointment does not exist";
+        logger.info(String.format(s.concat(": Appointment Type = %s, Appointment ID = %s"), appointmentID, appointmentType));
+        return s;
     }
 
     @Override
     public String bookAppointment(String patientID, AppointmentType appointmentType, String appointmentID) {
         Appointment appointment = new Appointment(appointmentID, appointmentType);
         if (isAppointmentPresent(appointmentID)) {
-            return _database.book(patientID, appointment);
+            String msg = _database.book(patientID, appointment);
+            logger.info(String.format(msg.concat(": Appointment Type = %s, Appointment ID = %s, Patient ID = %s"), appointmentID, appointmentType, patientID));
+            return msg;
         }
-        return "Couldn't book appointment because Appointment ID is wrong";
+        String msg = "Couldn't book appointment because Appointment ID is wrong";
+        logger.info(String.format(msg.concat(": Appointment Type = %s, Appointment ID = %s, Patient ID = %s"), appointmentID, appointmentType, patientID));
+        return msg;
     }
 
     @Override
     public String cancelAppointment(String patientID, String appointmentID) {
         if (isAppointmentPresent(appointmentID)) {
-            return _database.cancel(patientID, appointmentID);
+            String cancelMsg = _database.cancel(patientID, appointmentID);
+            logger.info(String.format(cancelMsg.concat(": Appointment ID = %s, Patient ID = %s"), appointmentID, patientID));
+            return cancelMsg;
         }
-        return "Patient does not have the appointment booked";
+        String s = "Patient does not have the appointment booked";
+        logger.info(String.format(s.concat(": Appointment ID = %s, Patient ID = %s"), appointmentID, patientID));
+        return s;
     }
 
     @Override
     public String getAppointmentSchedule(String patientID) {
         List<Appointment> appointmentList = _database.getByPatientId(patientID);
         String msg = appointmentList.toString();
+        logger.info(String.format(msg.concat(": Patient ID = %s"), patientID));
         return msg;
     }
 
@@ -89,7 +107,7 @@ public class ServerImpl extends HealthCareSystemPOA {
         stringBuilder.append(getOthersAvailability(appointmentType));
         stringBuilder.append(" ");
         String msg = stringBuilder.toString();
-//        logger.info(msg);
+        logger.info(msg);
         return msg;
     }
 
@@ -147,18 +165,20 @@ public class ServerImpl extends HealthCareSystemPOA {
     }
 
     @Override
-    public boolean swapAppointment(String patientID, String oldAppointmentType, String oldAppointmentID, String newAppointmentType, String newAppointmentID) {
+    public String swapAppointment(String patientID, String oldAppointmentType, String oldAppointmentID, String newAppointmentType, String newAppointmentID) {
+        String msg = "";
         if (!isAppointmentPresent(oldAppointmentID)) {
-            return false;
+            msg = "Old Appointment does not seem to exist";
         }
 
         HospitalType hospitalTypeInfo = extractHospitalInfo(newAppointmentID);
         if (!isBookableAndBooked(hospitalTypeInfo.getHospitalServerAddress(), newAppointmentID, patientID)) {
-            return  false;
+            msg = "Could not swap appointment";
         }
 
         _database.cancel(patientID, oldAppointmentID);
-        return true;
+        msg = "Appointments were successfully swapped ";
+        return msg;
     }
 
     private HospitalType extractHospitalInfo(String newAppointmentID) {
