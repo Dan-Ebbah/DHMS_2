@@ -11,6 +11,6 @@ module ManagementServer {
         string cancelAppointment(in string patientID, in string appointmentID);
         string getAppointmentSchedule(in string patientID);
         string listAppointmentAvailability(in string appointmentType);
-        boolean swapAppointment(in string patientID, in string oldAppointmentType, in string oldAppointmentID, in string newAppointmentType, in string newAppointmentID);
+        string swapAppointment(in string patientID, in string oldAppointmentType, in string oldAppointmentID, in string newAppointmentType, in string newAppointmentID);
     };
 };
