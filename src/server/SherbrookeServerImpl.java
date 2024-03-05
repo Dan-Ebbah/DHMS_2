@@ -2,12 +2,13 @@ package server;
 
 import database.HashMapImpl;
 import model.UDPServerInfo;
+import util.LoggerUtil;
 
 import java.net.SocketException;
 
 public class SherbrookeServerImpl extends ServerImpl{
     public SherbrookeServerImpl(HashMapImpl database) throws SocketException {
-        super(database, 5053);
+        super(database, 5053, LoggerUtil.getLogger(SherbrookeServerImpl.class.getName(), "Sherbrooke"));
     }
 
     @Override
