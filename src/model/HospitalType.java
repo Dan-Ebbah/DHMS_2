@@ -1,15 +1,18 @@
 package model;
 
 public enum HospitalType {
-    MTL("Montreal", "MTL"),
-    QUE("Quebec", "QUE"),
-    SHE("Sherbrooke", "SHE");
+    MTL("Montreal", "MTL", new UDPServerInfo("MontrealServerAddress", 5052)),
+    QUE("Quebec", "QUE", new UDPServerInfo("QuebecServerAddress", 5051)),
+    SHE("Sherbrooke", "SHE", new UDPServerInfo("SherbrookeServerAddress", 5053));
 
     private final String _hospitalName;
     private final String _hospitalCode;
-    HospitalType(final String hospitalName, final String hospitalCode) {
+
+    private final UDPServerInfo _hospitalServerAddress;
+    HospitalType(final String hospitalName, final String hospitalCode, final UDPServerInfo serverAddress) {
         _hospitalName = hospitalName;
         _hospitalCode = hospitalCode;
+        _hospitalServerAddress = serverAddress;
     }
 
     public String getHospitalName() {
@@ -18,6 +21,10 @@ public enum HospitalType {
 
     public String getHospitalCode() {
         return _hospitalCode;
+    }
+
+    public UDPServerInfo getHospitalServerAddress() {
+        return _hospitalServerAddress;
     }
 
     public static HospitalType findHospital(String hospitalCode) {
